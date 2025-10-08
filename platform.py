@@ -12,17 +12,51 @@ pygame.display.set_caption('Platform')
 pygame.font.init()
 
 
-class Character:
+class BaseObject:
+    def __init__(self, x, y, imagefile, z=250):
+        self._imagefile = imagefile
+        self._x = x
+        self._y = y
+        self._z = z
+        print(self._imagefile)
+        self._image = pygame.image.load(self._imagefile).convert_alpha()
+        self._rect = self._image.get_rect()
+        self._rect.move_ip(self._x, self._y)
+        self._type = "object"
+
+    def move_to(self, x, y):
+        self._rect.move_ip(x - self._x, y - self._y)
+        self._x = x
+        self._y = y
+
+    def move_by(self, x, y):
+        self._x += x
+        self._y += y
+        self._rect.move_ip(x, y)
+
+    def draw(self, screen):
+        screen.blit(self._image, self._rect)
+
+    def rect(self):
+        return self._rect
+
+    def zorder(self):
+        return self._z
+
+    def type(self):
+        return self._type
+
+
+class Character(BaseObject):
 
     def __init__(self, x, y, imagefile):
-        self._image = pygame.image.load(imagefile).convert_alpha()
-        self._rect = self._image.get_rect()
-        self._rect.move_ip(x, y)
+        super().__init__(x, y, imagefile)
         self._vertical_speed = 30
         self._horizontal_speed = 0
         self._on_the_ground = False
+        self._type = "character"
 
-    def move(self,limit_rect):
+    def move(self, limit_rect):
         x = self._horizontal_speed
         y = self._vertical_speed
 
@@ -30,7 +64,7 @@ class Character:
 
         clamp = False
         # At the bottom edge
-        if  self._rect.y+self._rect.height >= limit_rect.y+limit_rect.height:
+        if self._rect.y + self._rect.height >= limit_rect.y + limit_rect.height:
             clamp = True
             self._horizontal_speed = 0
             self._vertical_speed = 0
@@ -39,7 +73,7 @@ class Character:
             self._on_the_ground = False
 
         # At the top edge
-        if  self._rect.y < limit_rect.y:
+        if self._rect.y < limit_rect.y:
             clamp = True
             self._horizontal_speed = 0
             self._vertical_speed = 0
@@ -52,7 +86,7 @@ class Character:
                 self._vertical_speed = 0
 
         # At the right edge
-        if self._rect.x +self._rect.width > limit_rect.x + limit_rect.width:
+        if self._rect.x + self._rect.width > limit_rect.x + limit_rect.width:
             clamp = True
             self._horizontal_speed = 0
             if self._vertical_speed < 0:
@@ -61,27 +95,21 @@ class Character:
         if clamp:
             self._rect.clamp_ip(limit_rect)
 
-        if self._vertical_speed < 50 :
+        if self._vertical_speed < 50:
             self._vertical_speed += 3
 
     def jumpUp(self):
         self._vertical_speed = -40
 
-    def jumpLeft(self,onGround):
+    def jumpLeft(self, onGround):
         if onGround:
             self._vertical_speed = -5
         self._horizontal_speed = -10
 
-    def jumpRight(self,onGround):
+    def jumpRight(self, onGround):
         if onGround:
             self._vertical_speed = -5
         self._horizontal_speed = 10
-
-    def draw(self, screen):
-        screen.blit(self._image, self._rect)
-
-    def rect(self):
-        return self._rect
 
     def onGround(self):
         return self._on_the_ground
@@ -99,20 +127,20 @@ class Character:
         return self._horizontal_speed > 0
 
 
-class FlyingNPC:
+class FlyingNPC(BaseObject):
 
-    def __init__(self, imagefile):
-        self._image = pygame.image.load(imagefile).convert_alpha()
-        self._rect = self._image.get_rect()
+    def __init__(self, imagefile , objecttype="flying"):
+        super().__init__(0, 0, imagefile)
         self._position = self.__chooseRandomPosition()
+        self.move_to(self._position[0], self._position[1])
         self._speed = random.randint(10, 30)
-        self._rect.move_ip(self._position[0], self._position[1])
         self._nextpos = self.__chooseRandomPosition()
         self.__calculateXYSpeed()
+        self._type = objecttype
 
     def __chooseRandomPosition(self):
-        x = random.randint(int(self._rect.width / 2), SCREEN_DIMENSIONS[0] - int(self._rect.width / 2))
-        y = random.randint(int(self._rect.height / 2), SCREEN_DIMENSIONS[1] - int(self._rect.height / 2))
+        x = random.randint(int(self.rect().width / 2), SCREEN_DIMENSIONS[0] - int(self.rect().width / 2))
+        y = random.randint(int(self.rect().height / 2), SCREEN_DIMENSIONS[1] - int(self.rect().height / 2))
         return (x, y)
 
     def __calculateXYSpeed(self):
@@ -153,26 +181,30 @@ class FlyingNPC:
             self._nextpos = self.__chooseRandomPosition()
             self.__calculateXYSpeed()
 
-    def draw(self, screen):
-        screen.blit(self._image, self._rect)
 
-    def rect(self):
-        return self._rect
+class Feature(BaseObject):
 
+    def __init__(self, x, y, imagefile , objecttype="feature"):
+        print(x, y, imagefile)
+        super().__init__(x, y, imagefile)
+        self._type = objecttype
+        self._collision_directions = [True,True,True,True]
 
-class Feature:
+    def setCollisionDirections(self, top=False, bottom=False, left=False, right=False):
+        self._collision_directions = [left, bottom, right, top]
+        return self
 
-    def __init__(self, x, y, imagefile):
-        self._image = pygame.image.load(imagefile).convert_alpha()
-        self._rect = self._image.get_rect()
-        self._rect.move_ip(x, y)
+    def collisions_top(self):
+        return self._collision_directions[3]
 
-    def rect(self):
-        return self._rect
+    def collisions_bottom(self):
+        return self._collision_directions[1]
 
-    def draw(self, screen):
-        screen.blit(self._image, self._rect)
+    def collisions_left(self):
+        return self._collision_directions[0]
 
+    def collisions_right(self):
+        return self._collision_directions[2]
 
 class WelcomeScreen:
 
@@ -191,125 +223,144 @@ class WelcomeScreen:
 
 class Game:
     def __init__(self, screen):
-        self.running = False
-        self.score = 0
-        self.frog = None
-        self.flies = []
-        self.features = []
+        self._running = False
+        self._score = 0
+        self._character = None
+        self._flying = []
+        self._features = []
 
-        self.screen = screen
-        self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont('Comic Sans MS', 50)
+        self._screen = screen
+        self._clock = pygame.time.Clock()
+        self._font = pygame.font.SysFont('Comic Sans MS', 50)
+
+        self._collisionHandler = None
+
+    def setCollisionHandler(self, handler):
+        self._collisionHandler = handler
 
     def refreshScreen(self):
         # refresh the display
-        self.screen.fill((255, 255, 255))
+        self._screen.fill((255, 255, 255))
 
-        for feature in self.features:
-            feature.draw(self.screen)
+        all_objects = [self._character, ]
+        all_objects.extend(self._features)
+        all_objects.extend(self._flying)
 
-        self.frog.draw(self.screen)
+        all_objects.sort(key=lambda object: object.zorder())
 
-        for fly in self.flies:
-            fly.draw(self.screen)
+        for object in all_objects:
+            object.draw(self._screen)
 
-        text = self.font.render('%d' % self.score, False, (32, 128, 32))
-        self.screen.blit(text, (15, 15))
+        text = self._font.render('%d' % self._score, False, (32, 128, 32))
+        self._screen.blit(text, (15, 15))
 
         pygame.display.update()
 
-    def characterOnTheGround(self):
-        rect = self.frog.rect()
-        return rect.y >= SCREEN_DIMENSIONS[1] - rect.height
+    def setCharacter(self, character):
+        self._character = character
 
-    def newFly(self):
-        self.flies.append(FlyingNPC(os.path.join(IMAGE_DIR, 'small_fly.png')))
+    def addFeature(self, feature):
+        self._features.append(feature)
+
+    def addFlying(self, flying):
+        self._flying.append(flying)
+
+    def deleteFlying(self, flying):
+        self._flying.remove(flying)
+
+    def incrementScore(self):
+        self._score += 1
 
     def run(self):
-        # create the background
-        self.features.append(Feature(100, 400, os.path.join(IMAGE_DIR, 'grass.png')))
-        self.features.append(Feature(300, 500, os.path.join(IMAGE_DIR, 'grass.png')))
-        self.features.append(Feature(500, 600, os.path.join(IMAGE_DIR, 'grass.png')))
-        self.features.append(Feature(200, 700, os.path.join(IMAGE_DIR, 'grass.png')))
-        self.features.append(Feature(300, 200, os.path.join(IMAGE_DIR, 'grass.png')))
+        self._running = True
 
-
-        # create frog and the first fly
-        self.frog = Character(SCREEN_DIMENSIONS[0] / 2, SCREEN_DIMENSIONS[1] /2,
-                              os.path.join(IMAGE_DIR, 'small_frog.png'))
-        self.newFly()
-        self.running = True
-
-        countDownToNextFly = random.randrange(30, 300)
-        while self.running:
-            self.clock.tick(30)
-
-            # generate random flies
-            countDownToNextFly -= 1
-            if countDownToNextFly <= 0:
-                self.newFly()
-                countDownToNextFly = random.randrange(30, 300)
+        while self._running:
+            self._clock.tick(30)
 
             # Watch for keyboard and mouse events
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
+                    self._running = False
                     sys.exit()
-                if  event.type == pygame.KEYDOWN :
+                if event.type == pygame.KEYDOWN:
                     keys = pygame.key.get_pressed()
                     if keys[pygame.K_LEFT]:
-                        self.frog.jumpLeft(self.frog.onGround())
+                        self._character.jumpLeft(self._character.onGround())
                     if keys[pygame.K_RIGHT]:
-                        self.frog.jumpRight(self.frog.onGround())
-                    if (keys[pygame.K_UP] or keys[pygame.K_SPACE]) and self.frog.onGround():
-                        self.frog.jumpUp()
+                        self._character.jumpRight(self._character.onGround())
+                    if (keys[pygame.K_UP] or keys[pygame.K_SPACE]) and self._character.onGround():
+                        self._character.jumpUp()
 
             # what if the frog about to hit the ground or a feature?
-            clamp = [0,SCREEN_DIMENSIONS[1],SCREEN_DIMENSIONS[0],0]
-            frog_rect = self.frog.rect()
+            clamp = [0, SCREEN_DIMENSIONS[1], SCREEN_DIMENSIONS[0], 0]
+            frog_rect = self._character.rect()
             halo = frog_rect.inflate(0, 0)
-            if self.frog.movingDown() or self.frog.movingUp():
+            if self._character.movingDown() or self._character.movingUp():
                 halo.inflate_ip(0, 100)
-            if self.frog.movingLeft() or self.frog.movingRight():
+            if self._character.movingLeft() or self._character.movingRight():
                 halo.inflate_ip(100, 0)
 
-            for feature in self.features:
+            for feature in self._features:
                 if feature.rect().colliderect(halo):
-                    if self.frog.movingDown() and frog_rect.y + frog_rect.height <= feature.rect().y:
+                    if (self._character.movingDown() and feature.collisions_top() and
+                            frog_rect.y + frog_rect.height <= feature.rect().y) :
                         clamp[1] = feature.rect().y
-                    if self.frog.movingUp() and frog_rect.y >= feature.rect().y + feature.rect().height:
+                    if (self._character.movingUp() and feature.collisions_bottom() and
+                            frog_rect.y >= feature.rect().y + feature.rect().height):
                         clamp[3] = feature.rect().y + feature.rect().height
-                    if self.frog.movingLeft() and frog_rect.x + frog_rect.width <= feature.rect().x:
+                    if (self._character.movingLeft() and feature.collisions_right() and
+                            frog_rect.x + frog_rect.width <= feature.rect().x):
                         clamp[2] = feature.rect().x
-                    if self.frog.movingRight() and frog_rect.x >= feature.rect().x + feature.rect().width:
+                    if (self._character.movingRight() and feature.collisions_left() and
+                            frog_rect.x >= feature.rect().x + feature.rect().width):
                         clamp[0] = feature.rect().x + feature.rect().width
 
             clamprect = pygame.Rect(clamp[0], clamp[3], clamp[2] - clamp[0], clamp[1] - clamp[3])
 
-            # update the frog position
-            self.frog.move(clamprect)
+            # update the character position
+            self._character.move(clamprect)
 
-            # move the flies
-            for fly in self.flies:
+            # move the flying NPCs
+            for fly in self._flying:
                 fly.move()
 
-            # detect collisions
-            eaten = []
-            for idx, fly in enumerate(self.flies):
-                if fly.rect().colliderect(self.frog.rect()):
-                    eaten.append(idx)
-                    self.score += 1
-
-            # delete eaten flies
-            for idx in reversed(eaten):
-                del self.flies[idx]
-
-            # if we have zero flies, create a fly
-            if len(self.flies) < 1:
-                self.newFly()
+            # detect collisions with the flying NPCs
+            for idx, fly in enumerate(self._flying):
+                if fly.rect().colliderect(self._character.rect()):
+                    if self._collisionHandler is not None:
+                        self._collisionHandler( self, fly )
 
             self.refreshScreen()
 
+################## GAME SPECIFIC CODE BELOW HERE #####################
 
+
+def handleCollisions(game,item):
+    if item.type() == "flying":
+        game.deleteFlying(item)
+        game.incrementScore()
+        game.addFlying(FlyingNPC(os.path.join(IMAGE_DIR, 'small_fly.png')))
+
+
+# create the blank game
 game = Game(screen)
+
+# create the frog in the centre of the screen
+game.setCharacter(Character(SCREEN_DIMENSIONS[0] / 2, SCREEN_DIMENSIONS[1] / 2,
+                            os.path.join(IMAGE_DIR, 'small_frog.png')))
+
+# create the platforms
+game.addFeature(Feature(100, 400, os.path.join(IMAGE_DIR, 'grass.png')))
+game.addFeature(Feature(300, 500, os.path.join(IMAGE_DIR, 'grass.png')))
+game.addFeature(Feature(500, 600, os.path.join(IMAGE_DIR, 'grass.png')).setCollisionDirections(top=True,left=True,right=True))
+game.addFeature(Feature(200, 700, os.path.join(IMAGE_DIR, 'grass.png')))
+game.addFeature(Feature(300, 200, os.path.join(IMAGE_DIR, 'grass.png')))
+
+# create the first fly
+game.addFlying(FlyingNPC(os.path.join(IMAGE_DIR, 'small_fly.png')))
+
+# set collision callback
+game.setCollisionHandler( handleCollisions )
+
+# start the game
 game.run()
