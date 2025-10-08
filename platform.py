@@ -98,6 +98,9 @@ class Character(BaseObject):
         if self._vertical_speed < 50:
             self._vertical_speed += 3
 
+    def moveUp(self):
+        self._vertical_speed = -20
+
     def jumpUp(self):
         self._vertical_speed = -40
 
@@ -288,7 +291,9 @@ class Game:
                         self._character.jumpLeft(self._character.onGround())
                     if keys[pygame.K_RIGHT]:
                         self._character.jumpRight(self._character.onGround())
-                    if (keys[pygame.K_UP] or keys[pygame.K_SPACE]) and self._character.onGround():
+                    if keys[pygame.K_UP]  and self._character.onGround():
+                        self._character.moveUp()
+                    if keys[pygame.K_SPACE] and self._character.onGround():
                         self._character.jumpUp()
 
             # what if the frog about to hit the ground or a feature?
@@ -352,9 +357,13 @@ game.setCharacter(Character(SCREEN_DIMENSIONS[0] / 2, SCREEN_DIMENSIONS[1] / 2,
 # create the platforms
 game.addFeature(Feature(100, 400, os.path.join(IMAGE_DIR, 'grass.png')))
 game.addFeature(Feature(300, 500, os.path.join(IMAGE_DIR, 'grass.png')))
-game.addFeature(Feature(500, 600, os.path.join(IMAGE_DIR, 'grass.png')).setCollisionDirections(top=True,left=True,right=True))
 game.addFeature(Feature(200, 700, os.path.join(IMAGE_DIR, 'grass.png')))
 game.addFeature(Feature(300, 200, os.path.join(IMAGE_DIR, 'grass.png')))
+
+game.addFeature(Feature(500, 600, os.path.join(IMAGE_DIR, 'grass.png')))
+game.addFeature(Feature(550, 550, os.path.join(IMAGE_DIR, 'ladder.png')).setCollisionDirections(top=True,left=True,right=True))
+game.addFeature(Feature(550, 480, os.path.join(IMAGE_DIR, 'ladder.png')).setCollisionDirections(top=True,left=True,right=True))
+game.addFeature(Feature(550, 410, os.path.join(IMAGE_DIR, 'ladder.png')).setCollisionDirections(top=True,left=True,right=True))
 
 # create the first fly
 game.addFlying(FlyingNPC(os.path.join(IMAGE_DIR, 'small_fly.png')))
