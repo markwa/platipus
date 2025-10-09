@@ -21,7 +21,7 @@ def handleCollisions(game, item):
 # create the blank game
 game = Game(screen)
 
-# create the frog in the centre of the screen
+# create the frog on the screen
 game.set_character(Character(350, 100, os.path.join(IMAGE_DIR, 'small_frog.png')))
 
 # create the platforms
